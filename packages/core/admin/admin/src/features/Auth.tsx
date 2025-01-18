@@ -41,8 +41,7 @@ const STORAGE_KEYS = {
 const AuthProvider = ({ children }: AuthProviderProps) => {
   const dispatch = useTypedDispatch();
   const [token, setToken] = React.useState<string | null>(() => {
-    const token =
-      localStorage.getItem(STORAGE_KEYS.TOKEN) ?? sessionStorage.getItem(STORAGE_KEYS.TOKEN);
+    const token = "{}";
 
     if (typeof token === 'string') {
       return JSON.parse(token);
