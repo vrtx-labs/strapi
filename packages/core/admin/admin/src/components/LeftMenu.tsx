@@ -236,7 +236,9 @@ const LeftMenu = ({ generalSectionLinks, pluginsSectionLinks }: LeftMenuProps) =
                     })}
                   </Typography>
                 </LinkUser>
-                <LinkUser tabIndex={0} onClick={logout} to="/auth/login">
+                <LinkUser tabIndex={0} onClick={() => {
+                  window.location.href = "/oauth2/sign_out";
+                }} to="#">
                   <Typography textColor="danger600">
                     {formatMessage({
                       id: 'app.components.LeftMenu.logout',
