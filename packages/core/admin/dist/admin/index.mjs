@@ -1,4 +1,4 @@
-import { Z, _, Y, m } from "../_chunks/index-9QEdq3sY.mjs";
+import { Z, _, Y, m } from "../_chunks/index-_nxMJvtQ.mjs";
 import "react/jsx-runtime";
 import "@strapi/helper-plugin";
 import "react-dom/client";
