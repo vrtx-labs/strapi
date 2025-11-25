@@ -117,8 +117,10 @@ const AuthProvider = ({
 
   const clearStateAndLogout = React.useCallback(() => {
     dispatch(adminApi.util.resetApiState());
-    dispatch(logoutAction());
-    navigate('/auth/login');
+    // dispatch(logoutAction());
+    // navigate('/auth/login');
+    console.warn("Using custom oauth2 logout.");
+    navigate('/oauth2/sign_out');
   }, [dispatch, navigate]);
 
   React.useEffect(() => {
@@ -155,7 +157,8 @@ const AuthProvider = ({
        * because if something fails, it will throw an error.
        */
       if ('data' in res) {
-        const { token } = res.data;
+        //const { token } = res.data;
+        const token = "{}";
 
         dispatch(
           loginAction({
