@@ -14,16 +14,16 @@ const PrivateRoute = ({ children }: PrivateRouteProps) => {
 
   return token !== null ? (
     children
-  ) : (
-    <Navigate
-      to={{
-        pathname: '/auth/login',
-        search:
-          pathname !== '/'
-            ? `?redirectTo=${encodeURIComponent(`${pathname}${search}`)}`
-            : undefined,
-      }}
-    />
+  ) : ( children
+    // <Navigate
+    //   to={{
+    //     pathname: '/auth/login',
+    //     search:
+    //       pathname !== '/'
+    //         ? `?redirectTo=${encodeURIComponent(`${pathname}${search}`)}`
+    //         : undefined,
+    //   }}
+    // />
   );
 };
 

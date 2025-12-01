@@ -25,11 +25,11 @@ import type {
 
 interface Permission
   extends Pick<PermissionContract, 'action' | 'subject'>,
-    Partial<Omit<PermissionContract, 'action' | 'subject'>> {}
+  Partial<Omit<PermissionContract, 'action' | 'subject'>> { }
 
 interface User
   extends Pick<SanitizedAdminUser, 'email' | 'firstname' | 'lastname' | 'username' | 'roles'>,
-    Partial<Omit<SanitizedAdminUser, 'email' | 'firstname' | 'lastname' | 'username' | 'roles'>> {}
+  Partial<Omit<SanitizedAdminUser, 'email' | 'firstname' | 'lastname' | 'username' | 'roles'>> { }
 
 interface AuthContextValue {
   login: (
@@ -98,7 +98,7 @@ const AuthProvider = ({
      * If there's no token, we don't try to fetch
      * the user data because it will fail.
      */
-    skip: !token,
+    // skip: !token,
   });
 
   const {
@@ -107,7 +107,7 @@ const AuthProvider = ({
     isUninitialized,
     isLoading: isLoadingPermissions,
   } = useGetMyPermissionsQuery(undefined, {
-    skip: !token,
+    // skip: !token,
   });
 
   const navigate = useNavigate();
@@ -157,8 +157,7 @@ const AuthProvider = ({
        * because if something fails, it will throw an error.
        */
       if ('data' in res) {
-        //const { token } = res.data;
-        const token = "{}";
+        const { token } = res.data;
 
         dispatch(
           loginAction({
