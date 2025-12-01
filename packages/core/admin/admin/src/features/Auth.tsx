@@ -117,9 +117,8 @@ const AuthProvider = ({
 
   const clearStateAndLogout = React.useCallback(() => {
     dispatch(adminApi.util.resetApiState());
-    // dispatch(logoutAction());
+    dispatch(logoutAction());
     // navigate('/auth/login');
-    console.warn("Using custom oauth2 logout.");
     navigate('/oauth2/sign_out');
   }, [dispatch, navigate]);
 
