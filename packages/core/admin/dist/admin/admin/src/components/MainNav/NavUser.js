@@ -57,9 +57,8 @@ const NavUser = ({ initials, showDisplayName = false, children, ...props })=>{
         navigate(redirection);
     };
     const handleLogout = ()=>{
-        const redirection = '/oauth2/sign_out';
         logout();
-        navigate(redirection);
+        window.location.href = '/oauth2/sign_out';
     };
     return /*#__PURE__*/ jsxRuntime.jsx(designSystem.Flex, {
         ...props,

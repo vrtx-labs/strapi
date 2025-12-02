@@ -38,8 +38,7 @@ const AuthProvider = ({ children, _defaultPermissions = [], _disableRenewToken =
     const clearStateAndLogout = React.useCallback(()=>{
         dispatch(adminApi.util.resetApiState());
         dispatch(logout());
-        // navigate('/auth/login');
-        navigate('/oauth2/sign_out');
+        window.location.href = '/oauth2/sign_out';
     }, [
         dispatch,
         navigate

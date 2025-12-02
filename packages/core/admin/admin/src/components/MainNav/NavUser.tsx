@@ -73,9 +73,8 @@ export const NavUser = ({
   };
 
   const handleLogout = () => {
-    const redirection = '/oauth2/sign_out';
     logout();
-    navigate(redirection);
+    window.location.href = '/oauth2/sign_out';
   };
 
   return (
