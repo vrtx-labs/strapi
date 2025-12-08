@@ -325,16 +325,32 @@ export const createContentTypeRepository: RepositoryFactoryMethod = (
       oldVersions: oldPublishedVersions,
     });
 
-    // Delete old published versions
-    await async.map(oldPublishedVersions, (entry: any) => entries.delete(entry.id));
+    // Update old published version instead!
+    // // Delete old published versions
+    // // await async.map(oldPublishedVersions, (entry: any) => entries.delete(entry.id));
 
     // Add firstPublishedAt to draft if it doesn't exist
     const updatedDraft = await async.map(draftsToPublish, (draft: any) =>
       addFirstPublishedAtToDraft(draft, entries.update, contentType)
     );
 
-    // Transform draft entry data and create published versions
-    const publishedEntries = await async.map(updatedDraft, (draft: any) =>
+    // Update published entry
+    let publishedEntries;
+    if (oldPublishedVersions.length > 0) {
+      const updateParams = await async.pipe(
+        validateParams,
+        // sets query to filter for published or draft
+        DP.statusToLookup(contentType),
+        // sets publishedAt value
+        DP.statusToData(contentType),
+        // Default locale will be set if not provided
+        i18n.defaultLocale(contentType),
+        i18n.localeToLookup(contentType),
+        i18n.localeToData(contentType))(params);
+      publishedEntries = await async.map(oldPublishedVersions, (published: any) => entries.update(published, updateParams))
+    }
+    // or transform draft entry data and create published versions if not yet published
+    else publishedEntries = await async.map(updatedDraft, (draft: any) =>
       entries.publish(draft, queryParams)
     );
 
