@@ -308,27 +308,6 @@ export const createContentTypeRepository: RepositoryFactoryMethod = (
       }),
     ]);
 
-    // Load any unidirectional relation targetting the old published entries
-    const relationsToSync = await unidirectionalRelations.load(
-      uid,
-      {
-        newVersions: draftsToPublish,
-        oldVersions: oldPublishedVersions,
-      },
-      {
-        shouldPropagateRelation: components.createComponentRelationFilter(),
-      }
-    );
-
-    const bidirectionalRelationsToSync = await bidirectionalRelations.load(uid, {
-      newVersions: draftsToPublish,
-      oldVersions: oldPublishedVersions,
-    });
-
-    // Update old published version instead!
-    // // Delete old published versions
-    // // await async.map(oldPublishedVersions, (entry: any) => entries.delete(entry.id));
-
     // Add firstPublishedAt to draft if it doesn't exist
     const updatedDraft = await async.map(draftsToPublish, (draft: any) =>
       addFirstPublishedAtToDraft(draft, entries.update, contentType)
@@ -337,6 +316,54 @@ export const createContentTypeRepository: RepositoryFactoryMethod = (
     // Update published entry
     let publishedEntries;
     if (oldPublishedVersions.length > 0) {
+      // if no data is given, it should be copied from the draft
+      if (!params.data) {
+        const transformData = (obj1: any) => {
+          if (!obj1) return undefined;
+
+          let changes: any = {};
+          const staticAttributes = Object.values(contentTypesUtils.constants);
+          const { attributes: schema } = strapi.contentType(uid) as any;
+
+          for (const key in obj1) {
+            // exclude id, documentid, createdBy and the like
+            if (Object.values(staticAttributes).includes(key)) {
+              continue;
+            }
+
+            const getField = (fieldname: string) => {
+              if (obj1[key]) {
+                if (Array.isArray(obj1[key]))
+                  return obj1[key].map(((media: any) => media[fieldname]));
+                else
+                  return obj1[key] ? obj1[key][fieldname] : null;
+              }
+            }
+            // only id/documentId is needed to update relations
+            if (schema[key]?.type == 'media')
+              changes[key] = getField('id');
+            else if (schema[key]?.type == 'relation')
+              changes[key] = getField('documentId');
+            else {
+              changes[key] = obj1[key];
+
+              if (changes[key] && schema[key]?.type == 'component') {
+                if (Array.isArray(changes[key]))
+                  return changes[key].map(((component: any) => delete component.id));
+                else
+                delete changes[key].id;
+                // -> components can't be reused/reassigned via admin panel but only created
+                // therefore we hopefully never have the situation of overwriting the wrong component
+              }
+            }
+          }
+
+          return changes;
+        }
+
+        params.data = transformData(updatedDraft[0]);
+      }
+
       const updateParams = await async.pipe(
         validateParams,
         // sets query to filter for published or draft
@@ -347,24 +374,15 @@ export const createContentTypeRepository: RepositoryFactoryMethod = (
         i18n.defaultLocale(contentType),
         i18n.localeToLookup(contentType),
         i18n.localeToData(contentType))(params);
-      publishedEntries = await async.map(oldPublishedVersions, (published: any) => entries.update(published, updateParams))
+
+      // this would normally be handles by entries.publish so it is added here
+      params.data['publishedAt'] = new Date();
+
+      publishedEntries = await async.map(oldPublishedVersions, (published: any) => entries.update(published, updateParams));
     }
     // or transform draft entry data and create published versions if not yet published
     else publishedEntries = await async.map(updatedDraft, (draft: any) =>
       entries.publish(draft, queryParams)
-    );
-
-    // Sync unidirectional relations with the new published entries
-    await unidirectionalRelations.sync(
-      [...oldPublishedVersions, ...updatedDraft],
-      publishedEntries,
-      relationsToSync
-    );
-
-    await bidirectionalRelations.sync(
-      [...oldPublishedVersions, ...updatedDraft],
-      publishedEntries,
-      bidirectionalRelationsToSync
     );
 
     publishedEntries.forEach(emitEvent('entry.publish'));

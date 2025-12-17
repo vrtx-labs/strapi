@@ -233,40 +233,54 @@ const createContentTypeRepository = (uid, validator = index)=>{
                 ]
             })
         ]);
-        // Load any unidirectional relation targetting the old published entries
-        const relationsToSync = await unidirectionalRelations.load(uid, {
-            newVersions: draftsToPublish,
-            oldVersions: oldPublishedVersions
-        }, {
-            shouldPropagateRelation: components.createComponentRelationFilter()
-        });
-        const bidirectionalRelationsToSync = await bidirectionalRelations.load(uid, {
-            newVersions: draftsToPublish,
-            oldVersions: oldPublishedVersions
-        });
-        // Update old published version instead!
-        // // Delete old published versions
-        // // await async.map(oldPublishedVersions, (entry: any) => entries.delete(entry.id));
         // Add firstPublishedAt to draft if it doesn't exist
         const updatedDraft = await strapiUtils.async.map(draftsToPublish, (draft)=>firstPublishedAt.addFirstPublishedAtToDraft(draft, entries$1.update, contentType));
         // Update published entry
         let publishedEntries;
         if (oldPublishedVersions.length > 0) {
+            // if no data is given, it should be copied from the draft
+            if (!params.data) {
+                const transformData = (obj1)=>{
+                    if (!obj1) return undefined;
+                    let changes = {};
+                    const staticAttributes = Object.values(strapiUtils.contentTypes.constants);
+                    const { attributes: schema } = strapi.contentType(uid);
+                    for(const key in obj1){
+                        // exclude id, documentid, createdBy and the like
+                        if (Object.values(staticAttributes).includes(key)) {
+                            continue;
+                        }
+                        const getField = (fieldname)=>{
+                            if (obj1[key]) {
+                                if (Array.isArray(obj1[key])) return obj1[key].map((media)=>media[fieldname]);
+                                else return obj1[key] ? obj1[key][fieldname] : null;
+                            }
+                        };
+                        // only id/documentId is needed to update relations
+                        if (schema[key]?.type == 'media') changes[key] = getField('id');
+                        else if (schema[key]?.type == 'relation') changes[key] = getField('documentId');
+                        else {
+                            changes[key] = obj1[key];
+                            if (changes[key] && schema[key]?.type == 'component') {
+                                if (Array.isArray(changes[key])) return changes[key].map((component)=>delete component.id);
+                                else delete changes[key].id;
+                            // -> components can't be reused/reassigned via admin panel but only created
+                            // therefore we hopefully never have the situation of overwriting the wrong component
+                            }
+                        }
+                    }
+                    return changes;
+                };
+                params.data = transformData(updatedDraft[0]);
+            }
             const updateParams = await strapiUtils.async.pipe(validateParams, // sets query to filter for published or draft
             draftAndPublish.statusToLookup(contentType), // sets publishedAt value
             draftAndPublish.statusToData(contentType), // Default locale will be set if not provided
             internationalization.defaultLocale(contentType), internationalization.localeToLookup(contentType), internationalization.localeToData(contentType))(params);
+            // this would normally be handles by entries.publish so it is added here
+            params.data['publishedAt'] = new Date();
             publishedEntries = await strapiUtils.async.map(oldPublishedVersions, (published)=>entries$1.update(published, updateParams));
         } else publishedEntries = await strapiUtils.async.map(updatedDraft, (draft)=>entries$1.publish(draft, queryParams));
-        // Sync unidirectional relations with the new published entries
-        await unidirectionalRelations.sync([
-            ...oldPublishedVersions,
-            ...updatedDraft
-        ], publishedEntries, relationsToSync);
-        await bidirectionalRelations.sync([
-            ...oldPublishedVersions,
-            ...updatedDraft
-        ], publishedEntries, bidirectionalRelationsToSync);
         publishedEntries.forEach(emitEvent('entry.publish'));
         return {
             documentId,
